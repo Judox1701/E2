@@ -1,0 +1,59 @@
+version: "3"
+
+services:
+  # This service's own broker - hosts the "orders" fanout exchange (pubsub).
+  # kitchen-service connects here (as a client) to subscribe.
+  # See kitchen-service/docker-compose.yaml for the matching "kitchen_queue" broker.
+  orders-rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: orders-broker
+    ports:
+      - "5673:5672"   # AMQP
+      - "15673:15672" # management UI (guest/guest) - http://localhost:15673
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: securepassword123
+    networks:
+      service-mesh:
+  orders-service:
+    build: .
+    container_name: orders-service
+    # No host port: only reachable over the "service-mesh" network, not from
+    # the host. APISIX (api-gateway/apisix_routes/routes.sh) is now the only
+    # external entry point - note it still reaches this service's plain app
+    # port directly (APISIX has no sidecar), not through Connect/mTLS.
+    environment:
+      DB_HOST: orders-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: order-service
+      ORDERS_BROKER_URL: amqp://admin:securepassword123@orders-rabbitmq:5672
+      # kitchen-broker is now on the same Compose project/network (see root
+      # docker-compose.yaml's `include:`), reachable by service name.
+      KITCHEN_BROKER_URL: amqp://admin:securepassword123@kitchen-rabbitmq:5672
+    depends_on:
+      - orders-db
+      - orders-rabbitmq
+    networks:
+      # Fixed IP: this service's Consul registration (service-mesh/consul_conf
+      # /orders-service.hcl) uses it as "address" so the Envoy sidecar's
+      # public listener has a real IP to bind to.
+      service-mesh:
+        ipv4_address: 10.42.0.11
+  orders-db:
+    image: postgres:15.3
+    container_name: order-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: order-service
+    ports:
+      - "5439:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      service-mesh:
+
+networks:
+  service-mesh:

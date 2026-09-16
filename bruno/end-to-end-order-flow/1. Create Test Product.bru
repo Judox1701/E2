@@ -1,0 +1,43 @@
+meta {
+  name: 1. Create Test Product
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{gatewayBaseUrl}}/inventory
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "{{testItemName}}",
+    "quantity": {{testInitialQuantity}}
+  }
+}
+
+script:pre-request {
+  // Fresh, unique name each run so this flow never collides with data left
+  // over from a previous run (or from manually poking the APIs). Order id
+  // is no longer generated here - orders-service auto-assigns it now, step
+  // 2 captures whatever it returns.
+  bru.setVar("testItemName", "e2e-test-item-" + Date.now());
+  bru.setVar("testInitialQuantity", 100);
+  bru.setVar("testOrderQuantity", 3);
+}
+
+script:post-response {
+  bru.setVar("testProductId", res.getBody().id);
+}
+
+tests {
+  test("product created", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().name).to.equal(bru.getVar("testItemName"));
+  });
+}

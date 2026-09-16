@@ -1,0 +1,8 @@
+# Neither official image has both binaries: envoyproxy/envoy doesn't ship
+# consul, and hashicorp/consul doesn't ship envoy. `consul connect envoy`
+# needs both in the same container to bootstrap and run the sidecar proxy.
+FROM hashicorp/consul:2.0.4 AS consul
+
+FROM envoyproxy/envoy:v1.38.4
+COPY --from=consul /bin/consul /bin/consul
+ENTRYPOINT ["consul", "connect", "envoy"]

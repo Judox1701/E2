@@ -1,0 +1,77 @@
+services:
+  # Single-node Consul server acting as both control plane and (since this
+  # is a local/course demo, not a multi-host deployment) the one agent every
+  # service and sidecar registers with and talks to. Real deployments run a
+  # client agent per node instead of pointing everything at the server.
+  consul:
+    image: hashicorp/consul:2.0.4
+    container_name: consul
+    restart: always
+    command: agent -config-dir=/consul/config -data-dir=/consul/data
+    volumes:
+      # Not :ro - the official entrypoint chowns this dir to the consul user
+      # on boot and fails on a read-only mount.
+      - ./consul_conf:/consul/config
+      - consul_data:/consul/data
+    ports:
+      - "8500:8500"     # HTTP API + UI - http://localhost:8500
+      - "8600:8600/udp" # DNS
+    networks:
+      service-mesh:
+        ipv4_address: 10.42.0.10
+
+  # Sidecars share their app container's network namespace (network_mode:
+  # "service:<app>"), so the app can reach its sidecar on 127.0.0.1 and other
+  # sidecars reach this one at the app's own address:port - no ports/networks
+  # section here, it inherits both from the container it attaches to.
+  orders-service-sidecar:
+    build:
+      context: .
+      dockerfile: Dockerfile.consul-envoy
+    container_name: orders-service-sidecar
+    restart: on-failure
+    network_mode: "service:orders-service"
+    depends_on:
+      - consul
+      - orders-service
+    command:
+      - "-sidecar-for=orders-service"
+      - "-http-addr=consul:8500"
+      - "-grpc-addr=consul:8502"
+
+  kitchen-service-sidecar:
+    build:
+      context: .
+      dockerfile: Dockerfile.consul-envoy
+    container_name: kitchen-service-sidecar
+    restart: on-failure
+    network_mode: "service:kitchen-service"
+    depends_on:
+      - consul
+      - kitchen-service
+    command:
+      - "-sidecar-for=kitchen-service"
+      - "-http-addr=consul:8500"
+      - "-grpc-addr=consul:8502"
+
+  inventory-service-sidecar:
+    build:
+      context: .
+      dockerfile: Dockerfile.consul-envoy
+    container_name: inventory-service-sidecar
+    restart: on-failure
+    network_mode: "service:inventory-service"
+    depends_on:
+      - consul
+      - inventory-service
+    command:
+      - "-sidecar-for=inventory-service"
+      - "-http-addr=consul:8500"
+      - "-grpc-addr=consul:8502"
+
+volumes:
+  consul_data:
+    driver: local
+
+networks:
+  service-mesh:

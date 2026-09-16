@@ -1,0 +1,31 @@
+meta {
+  name: 3. Verify Kitchen Received Order
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{gatewayBaseUrl}}/kitchen
+  body: none
+  auth: none
+}
+
+script:pre-request {
+  // Order delivery is async (RabbitMQ queue + pubsub, each with its own
+  // retrying connection) - give kitchen-service a moment to consume both
+  // and call inventory-service through the mesh before we check.
+  await new Promise((resolve) => setTimeout(resolve, 4000));
+}
+
+tests {
+  test("kitchen received the order via both queue and pubsub", function () {
+    const orderId = bru.getVar("testOrderId");
+    const received = res.getBody().filter((o) => o.order_id === orderId);
+
+    // orders-service sends the same order over two independent transports
+    // (kitchen_queue + orders pubsub) - kitchen-service consumes both, so
+    // one order becomes two received_orders rows.
+    expect(received.length).to.equal(2);
+    expect(received.map((o) => o.source).sort()).to.deep.equal(["pubsub", "queue"]);
+  });
+}

@@ -1,0 +1,64 @@
+version: "3"
+
+services:
+  # This service's own broker - hosts the "kitchen_queue" queue.
+  # orders-service connects here (as a client) to send to it.
+  # See orders-service/docker-compose.yaml for the matching "orders" pubsub broker.
+  kitchen-rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: kitchen-broker
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: securepassword123
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # management UI (guest/guest) - http://localhost:15672
+    networks:
+      service-mesh:
+  kitchen-service:
+    build: .
+    container_name: kitchen-service
+    # No host port: only reachable over the "service-mesh" network, not from
+    # the host. APISIX (api-gateway/apisix_routes/routes.sh) is now the only
+    # external entry point - note it still reaches this service's plain app
+    # port directly (APISIX has no sidecar), not through Connect/mTLS.
+    environment:
+      DB_HOST: kitchen-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: kitchen-service
+      KITCHEN_BROKER_URL: amqp://admin:securepassword123@kitchen-rabbitmq:5672
+      # orders-broker is now on the same Compose project/network (see root
+      # docker-compose.yaml's `include:`), reachable by service name.
+      ORDERS_BROKER_URL: amqp://admin:securepassword123@orders-rabbitmq:5672
+      # Routed through the Consul Connect mesh: this service's Envoy sidecar
+      # (service-mesh/docker-compose.yaml) listens on 127.0.0.1:20032 and
+      # forwards mTLS-encrypted to inventory-service's sidecar. See
+      # service-mesh/consul_conf/kitchen-service.hcl for the upstream config.
+      INVENTORY_SERVICE_URL: http://127.0.0.1:20032
+    depends_on:
+      - kitchen-db
+      - kitchen-rabbitmq
+    networks:
+      # Fixed IP: this service's Consul registration (service-mesh/consul_conf
+      # /kitchen-service.hcl) uses it as "address" so the Envoy sidecar's
+      # public listener has a real IP to bind to.
+      service-mesh:
+        ipv4_address: 10.42.0.12
+  kitchen-db:
+    image: postgres:15.3
+    container_name: kitchen-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: kitchen-service
+    ports:
+      - "5441:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      service-mesh:
+
+networks:
+  service-mesh:

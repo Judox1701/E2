@@ -1,0 +1,36 @@
+meta {
+  name: 2. Create Order via Gateway
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{gatewayBaseUrl}}/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "productId": {{testProductId}},
+    "quantity": {{testOrderQuantity}},
+    "price": 9.99
+  }
+}
+
+script:post-response {
+  // id is now assigned by orders-service (auto-increment), not sent by the
+  // client - capture whatever it returns for the later verification steps.
+  bru.setVar("testOrderId", res.getBody().id);
+}
+
+tests {
+  test("order created", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().product_id).to.equal(bru.getVar("testProductId"));
+  });
+}

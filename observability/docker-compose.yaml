@@ -1,0 +1,72 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.25.0
+    restart: always
+    volumes:
+      - ./prometheus_conf/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      api-gateway:
+      # To scrape orders-service/kitchen-service/inventory-service by name -
+      # they don't publish host ports, only reachable on this network.
+      service-mesh:
+
+  grafana:
+    image: grafana/grafana:7.3.7
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./grafana_conf/provisioning:/etc/grafana/provisioning"
+      - "./grafana_conf/dashboards:/var/lib/grafana/dashboards"
+      - "./grafana_conf/config/grafana.ini:/etc/grafana/grafana.ini"
+    networks:
+      api-gateway:
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:3.7.7
+    restart: always
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki_conf/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      api-gateway:
+
+  # Ships logs from this project's containers to Loki. Needs the host's
+  # Docker socket to read container logs - see config.alloy for how that
+  # visibility is scoped down to just this compose project.
+  alloy:
+    image: grafana/alloy:v1.19.2
+    restart: always
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy_conf/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    ports:
+      - "12345:12345"
+    networks:
+      api-gateway:
+    depends_on:
+      - loki
+
+volumes:
+  loki_data:
+    driver: local
+  alloy_data:
+    driver: local
+
+networks:
+  api-gateway:
+  service-mesh:

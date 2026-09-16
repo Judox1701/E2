@@ -1,0 +1,16 @@
+include:
+  - path: ./api-gateway/docker-compose.yaml
+  - path: ./services/orders-service/docker-compose.yaml
+  - path: ./services/kitchen-service/docker-compose.yaml
+  - path: ./services/inventory-service/docker-compose.yaml
+  - path: ./observability/docker-compose.yaml
+  - path: ./service-mesh/docker-compose.yaml
+
+networks:
+  api-gateway:
+    driver: bridge
+  service-mesh:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.42.0.0/24

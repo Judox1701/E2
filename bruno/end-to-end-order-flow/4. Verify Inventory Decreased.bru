@@ -1,0 +1,26 @@
+meta {
+  name: 4. Verify Inventory Decreased
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{gatewayBaseUrl}}/inventory
+  body: none
+  auth: none
+}
+
+tests {
+  test("stock was decremented once per delivery (queue + pubsub)", function () {
+    const productId = bru.getVar("testProductId");
+    const initial = bru.getVar("testInitialQuantity");
+    const perOrder = bru.getVar("testOrderQuantity");
+    const product = res.getBody().find((p) => p.id === productId);
+
+    expect(product).to.not.equal(undefined);
+    // Each delivery path independently triggers kitchen-service's
+    // decreaseStock call to inventory-service (through the Consul Connect
+    // sidecar), so one order decrements stock twice.
+    expect(product.quantity).to.equal(initial - perOrder * 2);
+  });
+}

@@ -1,0 +1,17 @@
+meta {
+  name: end-to-end-order-flow
+}
+
+docs {
+  Creates a unique test product, places an order for it through APISIX,
+  waits for async delivery, then verifies kitchen-service received it twice
+  (once via the kitchen_queue, once via the orders pubsub exchange - see
+  kitchen-service/server.ts) and that inventory-service's stock dropped by
+  the order quantity twice - once per delivery.
+
+  Each decrement is kitchen-service calling inventory-service through its
+  Envoy sidecar (INVENTORY_SERVICE_URL -> 127.0.0.1:20032), i.e. through the
+  Consul Connect mesh - this flow is what that plumbing is actually for.
+
+  Run the four requests in order (Bruno's Runner respects their seq).
+}

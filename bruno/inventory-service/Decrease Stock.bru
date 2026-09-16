@@ -1,0 +1,22 @@
+meta {
+  name: Decrease Stock
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{gatewayBaseUrl}}/inventory/decrease
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "productId": 1,
+    "quantity": 1
+  }
+}
