@@ -18,7 +18,7 @@ services:
       # those no longer publish host ports, so this is now the only path in.
       service-mesh:
 
-  # One-shot: registers the orders/kitchen/inventory routes in APISIX (via
+  # One-shot: registers the service routes and the JWT consumer in APISIX (via
   # its etcd-backed Admin API) on every startup. Idempotent (PUT by fixed
   # route id), so safe to rerun - and routes stay editable in apisix-dashboard
   # afterward since they land in the same etcd store either way.
@@ -32,6 +32,8 @@ services:
       - apisix
     volumes:
       - ./apisix_routes/routes.sh:/routes.sh:ro
+      # Only the public key - APISIX verifies JWTs, it never signs them.
+      - ./jwt_keys/public.pem:/jwt_keys/public.pem:ro
     entrypoint: ["sh", "/routes.sh"]
     networks:
       api-gateway:
@@ -67,7 +69,3 @@ services:
 volumes:
   etcd_data:
     driver: local
-
-networks:
-  api-gateway:
-  service-mesh:

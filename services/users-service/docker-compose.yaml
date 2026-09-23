@@ -35,6 +35,3 @@ services:
       - ./data:/var/lib/postgresql/data
     networks:
       service-mesh:
-
-networks:
-  service-mesh:
