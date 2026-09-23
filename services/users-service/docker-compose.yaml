@@ -1,0 +1,40 @@
+version: "3"
+
+services:
+  users-service:
+    build: .
+    container_name: users-service
+    # No host port: only reachable over the "service-mesh" network, not from
+    # the host. APISIX (api-gateway/apisix_routes/routes.sh) is now the only
+    # external entry point - note it still reaches this service's plain app
+    # port directly (APISIX has no sidecar), not through Connect/mTLS.
+    environment:
+      DB_HOST: users-db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: users-service
+    depends_on:
+      - users-db
+    networks:
+      # Fixed IP: this service's Consul registration (service-mesh/consul_conf
+      # /users-service.hcl) uses it as "address" so the Envoy sidecar's
+      # public listener has a real IP to bind to.
+      service-mesh:
+        ipv4_address: 10.42.0.14
+  users-db:
+    image: postgres:15.3
+    container_name: users-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: users-service
+    ports:
+      - "5443:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      service-mesh:
+
+networks:
+  service-mesh:

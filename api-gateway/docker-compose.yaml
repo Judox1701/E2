@@ -23,7 +23,9 @@ services:
   # route id), so safe to rerun - and routes stay editable in apisix-dashboard
   # afterward since they land in the same etcd store either way.
   apisix-routes-init:
-    image: curlimages/curl:8.11.0
+    build:
+      context: .
+      dockerfile: Dockerfile.routes-init
     container_name: apisix-routes-init
     restart: "no"
     depends_on:

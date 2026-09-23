@@ -3,6 +3,7 @@ include:
   - path: ./services/orders-service/docker-compose.yaml
   - path: ./services/kitchen-service/docker-compose.yaml
   - path: ./services/inventory-service/docker-compose.yaml
+  - path: ./services/users-service/docker-compose.yaml
   - path: ./observability/docker-compose.yaml
   - path: ./service-mesh/docker-compose.yaml
 

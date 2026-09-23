@@ -53,3 +53,8 @@ scrape_configs:
     metrics_path: "/metrics"
     static_configs:
       - targets: ["inventory-service:3032"]
+  - job_name: "users-service"
+    scrape_interval: 5s
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["users-service:3033"]

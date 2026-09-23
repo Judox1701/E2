@@ -69,6 +69,21 @@ services:
       - "-http-addr=consul:8500"
       - "-grpc-addr=consul:8502"
 
+  users-service-sidecar:
+    build:
+      context: .
+      dockerfile: Dockerfile.consul-envoy
+    container_name: users-service-sidecar
+    restart: on-failure
+    network_mode: "service:users-service"
+    depends_on:
+      - consul
+      - users-service
+    command:
+      - "-sidecar-for=users-service"
+      - "-http-addr=consul:8500"
+      - "-grpc-addr=consul:8502"
+
 volumes:
   consul_data:
     driver: local

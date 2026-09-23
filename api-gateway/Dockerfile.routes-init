@@ -1,0 +1,8 @@
+# curlimages/curl is Alpine-based but ships without jq, which routes.sh can
+# use to build JSON bodies safely (e.g. embedding a multi-line PEM key).
+# The base image runs as an unprivileged user, so switch to root to install
+# and back afterward.
+FROM curlimages/curl:8.11.0
+USER root
+RUN apk add --no-cache jq
+USER curl_user

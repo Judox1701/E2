@@ -61,4 +61,16 @@ put_route inventory-service '{
   "upstream": { "type": "roundrobin", "nodes": { "inventory-service:3032": 1 } }
 }'
 
+put_route users-service-health '{
+  "uri": "/users/health",
+  "priority": 10,
+  "plugins": { "proxy-rewrite": { "uri": "/health" } },
+  "upstream": { "type": "roundrobin", "nodes": { "users-service:3033": 1 } }
+}'
+
+put_route users-service '{
+  "uris": ["/users", "/users/*"],
+  "upstream": { "type": "roundrobin", "nodes": { "users-service:3033": 1 } }
+}'
+
 echo "Routes registered."
