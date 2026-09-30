@@ -66,7 +66,6 @@ services:
       
 volumes:
   etcd_data:
-    driver: local
 
 networks:
   api-gateway:
