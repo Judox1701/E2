@@ -40,7 +40,7 @@ deployment:
 
   etcd:
     host:                           # it's possible to define multiple etcd hosts addresses of the same etcd cluster.
-      - "http://etcd:2379"          # multiple etcd address
+      - "http://host.docker.internal:2379" # published etcd port on the Docker host
     prefix: "/apisix"               # apisix configurations prefix
     timeout: 30                     # 30 seconds
 

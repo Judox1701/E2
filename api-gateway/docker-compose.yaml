@@ -2,6 +2,8 @@ services:
   apisix:
     image: apache/apisix:${APISIX_IMAGE_TAG:-3.18.0-debian}
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./apisix_conf/config.yaml:/usr/local/apisix/conf/config.yaml:ro
     depends_on:
@@ -28,10 +30,13 @@ services:
       dockerfile: Dockerfile.routes-init
     container_name: apisix-routes-init
     restart: "no"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - apisix
     volumes:
       - ./apisix_routes/routes.sh:/routes.sh:ro
+      - ./jwt_key:/jwt_key:ro
     entrypoint: ["sh", "/routes.sh"]
     networks:
       api-gateway:
